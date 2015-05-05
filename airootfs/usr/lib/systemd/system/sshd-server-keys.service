@@ -1,0 +1,12 @@
+[Unit]
+Description=sshd server key gen
+After=haveged.service
+
+[Service]
+User=root
+Type=oneshot
+ExecStart=/etc/systemd/scripts/sshd-server-keys
+
+[Install]
+WantedBy=multi-user.target
+

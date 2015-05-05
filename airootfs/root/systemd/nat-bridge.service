@@ -1,0 +1,10 @@
+[Unit]
+Description=nat bridge
+
+[Service]
+Type=oneshot
+ExecStart=/etc/systemd/scripts/nat-bridge
+
+[Install]
+WantedBy=network.target
+

@@ -1,0 +1,4 @@
+[NetDev]
+Name=internal
+Kind=bridge
+MACAddress=mac

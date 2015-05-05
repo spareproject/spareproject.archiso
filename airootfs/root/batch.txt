@@ -1,0 +1,10 @@
+%echo Generating a basic openpgp key
+Key-Type: RSA
+Key-Length: 4096
+Name-Real: root_
+Expire-Date: 0
+Passphrase: not_secure
+%commit
+%done
+
+

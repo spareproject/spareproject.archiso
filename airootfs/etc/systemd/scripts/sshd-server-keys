@@ -1,0 +1,6 @@
+#!/bin/env bash
+ssh-keygen -t rsa -b 4096 -C "spareproject@archiso" -f /home/spareproject/sshd/ssh_host_rsa_key -N ""
+chown spareproject:users /home/spareproject/sshd/ssh_host_rsa_key*
+ssh-keygen -t rsa -b 4096 -C "admin@archiso" -f /home/admin/sshd/ssh_host_rsa_key -N ""
+chown admin:wheel /home/admin/sshd/ssh_host_rsa_key*
+

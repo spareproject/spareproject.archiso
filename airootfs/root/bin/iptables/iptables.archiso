@@ -1,0 +1,119 @@
+#!/bin/env bash
+########################################################################################
+# filter...   INPUT OUTPUT FORWARD
+# nat...      PREROUTING OUTPUT POSTROUTING
+# mangle...   PREROUTING OUTPUT INPUT FORWARD POSTROUTING
+# raw...      PREROUTING OUTPUT
+# security... INPUT OUTPUT FORWARD
+########################################################################################
+iptables -F
+iptables -X
+iptables -t filter -F
+iptables -t filter -X
+iptables -t nat -F
+iptables -t nat -X
+iptables -t mangle -F
+iptables -t mangle -X
+iptables -t raw -F
+iptables -t raw -X
+iptables -t security -F
+iptables -t security -X
+########################################################################################
+iptables -P INPUT DROP
+iptables -P OUTPUT ACCEPT
+iptables -P FORWARD DROP
+########################################################################################
+iptables -N LO
+iptables -N KNOCK_ONE
+iptables -N KNOCK_TWO
+iptables -N KNOCK_THREE
+iptables -N KNOCK_FOUR
+iptables -N SESSION
+iptables -N AUTH
+iptables -N BLOCKED
+iptables -N BRIDGE
+iptables -N INTERNAL
+iptables -N TOR
+########################################################################################
+iptables -A INPUT -m conntrack --ctstate INVALID -j DROP
+iptables -A INPUT -j BLOCKED
+iptables -A INPUT -j KNOCK_ONE
+########################################################################################
+iptables -A INPUT -m recent --name KNOCK_TWO    --rcheck --seconds 60 --reap -j KNOCK_TWO 
+iptables -A INPUT -m recent --name KNOCK_THREE  --rcheck --seconds 60 --reap -j KNOCK_THREE
+iptables -A INPUT -m recent --name KNOCK_FOUR   --rcheck --seconds 60 --reap -j KNOCK_FOUR
+iptables -A INPUT -m recent --name SESSION      --rcheck --seconds 60 --reap -j SESSION
+iptables -A INPUT -m recent --name AUTH         --rcheck --seconds 60 --reap -j AUTH
+iptables -A KNOCK_THREE -m recent --name KNOCK_TWO   --remove
+iptables -A KNOCK_FOUR  -m recent --name KNOCK_THREE --remove
+iptables -A SESSION     -m recent --name KNOCK_FOUR  --remove 
+########################################################################################
+# to find out... bridge allows remote into eth0? because eth0's in it... also means every node gets limit iptables... cant test till multi iso boot works
+# rate limit
+# recent
+# iplimit
+# all set here before state gets to whitelist anything for every service / socket or jump to a force filter chain
+#iptables -A INPUT -i BRIDGE -p udp --dport 53 -j DROP
+iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED --ctproto tcp -j ACCEPT #socket_hitcount
+iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED --ctproto udp -j ACCEPT #socket_hitcount
+########################################################################################
+iptables -A INPUT -i lo         -m conntrack --ctstate NEW -j LO
+iptables -A INPUT -i notbridge     -m conntrack --ctstate NEW -j BRIDGE
+iptables -A INPUT -i internal   -m conntrack --ctstate NEW -j INTERNAL
+iptables -A INPUT -i tor        -m conntrack --ctstate NEW -j TOR
+iptables -A INPUT -j LOG --log-prefix "DROPPED" --log-level 6
+iptables -A INPUT -j DROP
+########################################################################################
+iptables -A LO -p udp -d 127.0.0.1 --dport 53 -j ACCEPT         # dns port unbound or iptables forward to 9053 tordns
+#iptables -A LO -p tcp -d 127.0.0.1 --dport 8080 -j ACCEPT       # nginx webserver port
+#iptables -A LO -p udp -d 127.0.0.1 --dport 9053 -j ACCEPT       # tor dns port
+#iptables -A LO -p tcp -d 127.0.0.1 --dport 9050 -j ACCEPT       # tor socks port
+#iptables -A LO -p tcp -d 127.0.0.1 --dport 9051 -j ACCEPT       # tor socks port
+#iptables -A LO -p tcp -d 127.0.0.1 --dport 6010:6023 -j ACCEPT  # sshx display ports
+iptables -A LO -j LOG --log-prefix "LO" --log-level 6
+iptables -A LO -j DROP
+########################################################################################
+iptables -A BRIDGE -p tcp --dport 12724 -j ACCEPT
+iptables -A BRIDGE -p tcp --dport 12725 -j ACCEPT
+iptables -A BRIDGE -j LOG --log-prefix "BRIDGE" --log-level 6
+iptables -A BRIDGE -j DROP
+########################################################################################
+iptables -A INTERNAL -p udp --dport 53 -j ACCEPT
+iptables -A INTERNAL -p udp --dport 67 -j ACCEPT
+iptables -A INTERNAL -p tcp --dport 8080 -j ACCEPT
+iptables -A INTERNAL -p tcp --dport 9050 -j ACCEPT
+iptables -A INTERNAL -p tcp --dport 9051 -j ACCEPT
+iptables -A INTERNAL -p udp --dport 9053 -j ACCEPT
+iptables -A INTERNAL -p tcp --dport 12724 -j ACCEPT
+iptables -A INTERNAL -p tcp --dport 12725 -j ACCEPT
+iptables -A INTERNAL -j LOG --log-prefix "INTERNAL" --log-level 6
+iptables -A INTERNAL -j DROP
+########################################################################################
+#iptables -A TOR -p udp --dport 53 -j ACCEPT
+#iptables -A TOR -p udp --dport 67 -j ACCEPT
+#iptables -A TOR -p tcp --dport 8080 -j ACCEPT
+iptables -A TOR -p tcp --dport 9050 -j ACCEPT
+iptables -A TOR -p tcp --dport 9051 -j ACCEPT
+iptables -A TOR -p udp --dport 9053 -j ACCEPT
+#iptables -A TOR -p tcp --dport 12724 -j ACCEPT
+#iptables -A TOR -p tcp --dport 12725 -j ACCEPT
+iptables -A TOR -j LOG --log-prefix "TOR" --log-level 6
+iptables -A TOR -j DROP
+########################################################################################
+iptables -t nat -A POSTROUTING -o notbridge -j MASQUERADE
+iptables -A FORWARD -i notbridge -o tor -m conntrack --ctstate ESTABLISHED,RELATED --ctproto tcp -j ACCEPT
+iptables -A FORWARD -i notbridge -o tor -m conntrack --ctstate ESTABLISHED,RELATED --ctproto udp -j ACCEPT
+iptables -A FORWARD -i notbridge -o internal -m conntrack --ctstate ESTABLISHED,RELATED --ctproto tcp -j ACCEPT
+iptables -A FORWARD -i notbridge -o internal -m conntrack --ctstate ESTABLISHED,RELATED --ctproto udp -j ACCEPT
+iptables -A FORWARD -p udp -i internal -o notbridge -j ACCEPT
+iptables -A FORWARD -p tcp -i internal -o notbridge -j ACCEPT
+iptables -A FORWARD -p udp -i tor -o notbridge -j ACCEPT
+iptables -A FORWARD -p tcp -i tor -o notbridge -j ACCEPT
+iptables -A FORWARD -j LOG --log-prefix "FORWARD" --log-level 6
+########################################################################################
+#iptables -t nat -A OUTPUT -s localhost -d localhost -p udp --dport 53 -j REDIRECT --to-port 9053
+#iptables -A PREROUTING -t nat -i !internal -p tcp --dport 80 -j REDIRECT --to-port 8080
+#iptables -A PREROUTING -t nat -i !internal -p tcp --dport 443 -j REDIRECT --to-port 8080
+########################################################################################
+iptables -t nat -A PREROUTING -i tor -p udp --dport 53 -j REDIRECT --to-ports 9053
+iptables -t nat -A PREROUTING -i tor -p tcp -j REDIRECT --to-ports 9050

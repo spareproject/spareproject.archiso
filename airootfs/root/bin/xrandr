@@ -1,0 +1,3 @@
+#!/bin/env bash
+xrandr --output DFP10 --auto --pos 1920x0 
+xrandr --output DVI-0 --auto --pos 1920x0

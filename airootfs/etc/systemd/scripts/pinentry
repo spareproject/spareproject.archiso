@@ -1,0 +1,7 @@
+#!/bin/env bash
+if [[ -f /usr/bin/pinentry ]];then
+  rm /usr/bin/pinentry
+  ln -s /usr/bin/pinentry-curses /usr/bin/pinentry
+else
+  ln -s /usr/bin/pinentry-curses /usr/bin/pinentry
+fi

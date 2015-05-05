@@ -1,0 +1,16 @@
+
+if gnupg --sign decides to actually encrypt with the private key rather than create shit loads of sign bloat and leave it clear text
+then this would be good copy the public key get remote knock access and execute
+
+but it doesnt requires
+
+server gnupg key for the user allowing remote access
+client gnupg key for the remote user requesting remote access
+
+both need to exchange keys server needs to encrypt for that user 
+
+could probably add an ip database to attempt some form of multiuser using nc 2>/
+but /shrug 
+
+
+
