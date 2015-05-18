@@ -1,0 +1,38 @@
+
+got bored wanted to see if tor bridge worked went on 2 tor enabled irc's using weechat from an nspawn container
+took about 15 minutes? before host was making network connections out so lulz at that 
+
+tried grsec kernel systemd-networkd doesnt work on boot because suid? then creating a bridge interface deleting it then restarting systemd-nspawn works? 
+didnt really get that so back to the normal one 
+
+chromium makes my computer sound like its trying to take off or more specifically g+ and gdrive 
+so going icecat probably dump a better iso with more foo on it
+
+wifi is a total pain should probably dump wifi-menu and dhcpcd on it but i havent used a laptop since linuxcon
+currently need to wpa_supplicant / wpa_cli to get anything up then manually set ip address so bit shit
+
+but this has far to little on it to be usefull 
+
+went root owned sshd wasted loads of time deleted loads of stuff booted a nspawn container with drop caps... and poof sshd as root needs chown 
+so back to none root sshd 
+
+going to make scripts to cryptsetup /dev/sda 
+if butterface gets "stable" raid5 then ill probably go butterface for internal storage 
+currently just doing cryptsetup on /dev/sdXY and  mkfs.ext4 /dev/mapper/sdXY
+
+/dev/sda cryptsetup + some form of pluggable gnupg + gpg-agent usb : / 
+/mnt/keys/key0.gpg
+/mnt/rawfs/storage.raw
+^ but no idea how to merge that with unionfs and containers
+
+basically dropping everything to make a small easy to maintain stick and then transferable desktop in a raw image 
+can tarball daily and dump it on whatever machine im on
+
+kde5 works in nspawn
+gnome sort of works in nspawn (sucks at resolution when headless)
+dwm always works and never breaks 
+
+container foo i uploaded was fugly and buggy still is :D 
+probably the next thing to fix 
+
+but its tidy enough to build up again
