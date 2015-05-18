@@ -1,0 +1,14 @@
+
+wpa_supplicant -B -i interface -c /etc/wpa_supplicant/wpa_supplicant.conf
+wpa_cli
+scan
+scan_results
+add_network
+set_network 0 ssid "ssid"
+set_network 0 psk "password"
+enable_network 0
+save_config
+dhcpcd interface
+ip addr add 192.168.0.23/24 dev interface
+ip route add default via 192.168.0.1
+

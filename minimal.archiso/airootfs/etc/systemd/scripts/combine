@@ -1,0 +1,20 @@
+#!/bin/env bash
+hostname="archiso-"
+hostname+=$(date | md5sum | sed 's/...$//')
+echo ${hostname} > /proc/sys/kernel/hostname
+echo ${hostname} > /etc/hostname
+unset hostname
+for i in $(ls /sys/class/net);do 
+  if [[ ${i} != lo ]];then macchanger -rb ${i};fi
+  if [[ ${i} == wl* ]];then
+    iptables -t nat -A POSTROUTING -o ${i} -j MASQUERADE
+    iptables -A FORWARD -i ${i} -o internal -m conntrack --ctstate ESTABLISHED,RELATED --ctproto tcp -j ACCEPT
+    iptables -A FORWARD -i ${i} -o internal -m conntrack --ctstate ESTABLISHED,RELATED --ctproto udp -j ACCEPT
+    iptables -A FORWARD -i ${i} -o tor -m conntrack --ctstate ESTABLISHED,RELATED --ctproto tcp -j ACCEPT
+    iptables -A FORWARD -i ${i} -o tor -m conntrack --ctstate ESTABLISHED,RELATED --ctproto udp -j ACCEPT
+    iptables -A FORWARD -p tcp -i internal -o ${i} -j ACCEPT
+    iptables -A FORWARD -p udp -i internal -o ${i} -j ACCEPT
+    iptables -A FORWARD -p tcp -i tor -o ${i} -j ACCEPT
+    iptables -A FORWARD -p udp -i tor -o ${i} -j ACCEPT
+  fi
+done

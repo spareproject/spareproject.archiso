@@ -1,0 +1,69 @@
+tables and default chains
+# filter...   INPUT OUTPUT FORWARD
+# nat...      PREROUTING OUTPUT POSTROUTING
+# mangle...   PREROUTING OUTPUT INPUT FORWARD POSTROUTING
+# raw...      PREROUTING OUTPUT
+# security... INPUT OUTPUT FORWARD
+
+better way to look at it...
+
+prerouting / input
+# raw...      PREROUTING OUTPUT
+# mangle...   PREROUTING OUTPUT INPUT FORWARD POSTROUTING
+# nat...      PREROUTING OUTPUT POSTROUTING
+# mangle...   PREROUTING OUTPUT INPUT FORWARD POSTROUTING
+# filter...   INPUT OUTPUT FORWARD
+
+output / postrouting
+# raw...      PREROUTING OUTPUT
+# mangle...   PREROUTING OUTPUT INPUT FORWARD POSTROUTING
+# nat...      PREROUTING OUTPUT POSTROUTING
+# filter...   INPUT OUTPUT FORWARD
+# mangle...   PREROUTING OUTPUT INPUT FORWARD POSTROUTING
+# nat...      PREROUTING OUTPUT POSTROUTING
+
+prerouting / forward / postrouting
+# raw...      PREROUTING OUTPUT
+# mangle...   PREROUTING OUTPUT INPUT FORWARD POSTROUTING
+# nat...      PREROUTING OUTPUT POSTROUTING
+# mangle...   PREROUTING OUTPUT INPUT FORWARD POSTROUTING
+# filter...   INPUT OUTPUT FORWARD
+# mangle...   PREROUTING OUTPUT INPUT FORWARD POSTROUTING
+# nat...      PREROUTING OUTPUT POSTROUTING
+
+input/output {
+  #raw      prerouting
+  #mangle   prerouting
+  #nat      prerouting
+  routing decision
+  #mangle   input
+  #filter   input
+  local process - ie connection came in something happened connection now going out
+  routing decision
+  #raw      output
+  #mangle   output
+  #nat      output
+  #filter   output
+  routing decision
+  #mangle   postrouting
+  #nat      postrouting
+}
+
+input/forward {
+  #raw      prerouting
+  #mangle   prerouting
+  #nat      prerouting
+  routing decision
+  #mangle   forward
+  #filter   forward
+  routing decision
+  #mangle   postrouting
+  #nat      postrouting
+}
+
+
+
+
+
+
+

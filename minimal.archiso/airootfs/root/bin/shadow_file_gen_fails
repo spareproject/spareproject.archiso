@@ -1,0 +1,10 @@
+#!/bin/env bash
+
+SPAREPROJECT=""
+while [[ ${#SPAREPROJECT} -lt "1000" ]];do
+  SPAREPROJECT+=`cat /dev/random | fold -w 1024 | head -n 1`
+done
+
+echo "spareproject length... ${#SPAREPROJECT}"
+
+echo ${SPAREPROJECT} | sha512sum
