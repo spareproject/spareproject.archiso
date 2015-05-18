@@ -1,0 +1,4 @@
+[NetDev]
+Name=tor
+Kind=bridge
+MACAddress=mac
