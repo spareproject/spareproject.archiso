@@ -36,3 +36,18 @@ container foo i uploaded was fugly and buggy still is :D
 probably the next thing to fix 
 
 but its tidy enough to build up again
+
+#Steam on a stick
+erm yeh wont boot if /dev/sda isnt a ext4 formatted device change fstab 
+stuck .bash_profile executes on tty2 to bind mount the stuff steam updates into the user config blargh blargh etc etc
+has pepper flash and chromium although im pretty sure that bbs iplayer is an attack site because everything else works
+watch that shit for 2 minutes and poof the entire liveusb goes down 
+interstellarer marines and some other random games need ttf-ms-fonts to work so thats in it
+could probably dump controller support at some point
+but easy working catalyst driver install on a stick 
+although i could never get dual card monitor output to work and everytime i used the actual interface it was set the right config reboot then the gui refused to boot afterwards 
+but it does work and you can actually see the updates in games definitly getting better pretty fun
+
+
+these are all totally volatile going to leave this repo add a new config mv the current to old and only store two at a time
+

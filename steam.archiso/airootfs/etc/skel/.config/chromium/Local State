@@ -1,0 +1,105 @@
+{
+   "app_list": {
+      "app_launch_count": 0,
+      "last_app_launch_ping": "13075516800000000",
+      "last_launch_ping": "13075516800000000",
+      "launch_count": 0
+   },
+   "background_mode": {
+      "enabled": false
+   },
+   "browser": {
+      "enabled_labs_experiments": [  ],
+      "last_redirect_origin": ""
+   },
+   "easy_unlock": {
+      "user_prefs": {
+         "": {
+            "easy_unlock.proximity_required": false
+         }
+      }
+   },
+   "gl_renderer_string": "Gallium 0.4 on llvmpipe (LLVM 3.6, 128 bits)",
+   "gl_vendor_string": "VMware, Inc.",
+   "gl_version_string": "3.0 Mesa 10.5.4",
+   "hardware_acceleration_mode": {
+      "enabled": false
+   },
+   "hardware_acceleration_mode_previous": false,
+   "local_state": {
+      "multiple_profile_prefs_version": 3
+   },
+   "ntp": {
+      "promo_resource_cache_update": "1431127179.191533"
+   },
+   "policy": {
+      "last_statistics_update": "13075600774187673"
+   },
+   "profile": {
+      "add_person_enabled": false,
+      "browser_guest_enabled": false,
+      "info_cache": {
+         "Default": {
+            "active_time": 1431127477.249663,
+            "avatar_icon": "chrome://theme/IDR_PROFILE_AVATAR_26",
+            "background_apps": false,
+            "is_ephemeral": false,
+            "is_omitted_from_profile_list": false,
+            "is_using_default_avatar": true,
+            "is_using_default_name": true,
+            "managed_user_id": "",
+            "name": "First user",
+            "user_name": ""
+         }
+      },
+      "last_active_profiles": [ "Default" ],
+      "last_used": "Default"
+   },
+   "rappor": {
+      "cohort_seed": 169,
+      "secret": "dKX8b+ZOwN7i0ToRXFTT9PSqhhPq8boXTeZ/L3iCjbC35pVaRX2ls8/Y3P1+TUqM"
+   },
+   "show-first-run-bubble-option": 0,
+   "shutdown": {
+      "num_processes": 1,
+      "num_processes_slow": 1,
+      "type": 1
+   },
+   "uninstall_metrics": {
+      "installation_date2": "1431127174",
+      "launch_count": "2"
+   },
+   "user_experience_metrics": {
+      "low_entropy_source2": 7835,
+      "session_id": 1,
+      "stability": {
+         "breakpad_registration_fail": 2,
+         "child_process_crash_count": 0,
+         "crash_count": 0,
+         "debugger_not_present": 2,
+         "execution_phase": 700,
+         "exited_cleanly": true,
+         "extension_renderer_crash_count": 0,
+         "incomplete_session_end_count": 0,
+         "last_timestamp_sec": "1431127490",
+         "launch_count": 2,
+         "launch_time_sec": "1431127369",
+         "page_load_count": 0,
+         "plugin_stats2": [ {
+            "crashes": 0,
+            "instances": 0,
+            "launches": 4,
+            "loading_errors": 0,
+            "name": "Shockwave Flash"
+         } ],
+         "renderer_crash_count": 0,
+         "renderer_hang_count": 0,
+         "session_end_completed": true,
+         "stats_buildtime": "1220371200",
+         "stats_version": "42.0.2311.135-64-devel"
+      }
+   },
+   "was": {
+      "restarted": false
+   }
+}
