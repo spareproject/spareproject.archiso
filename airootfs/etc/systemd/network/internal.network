@@ -1,5 +1,0 @@
-[Match]
-Name=internal
-[Network]
-Address=10.0.0.1/8
-IPForward=yes

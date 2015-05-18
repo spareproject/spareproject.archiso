@@ -1,8 +1,0 @@
-[Unit]
-Description=fcgiwrap Socket
-
-[Socket]
-ListenStream=/home/nginx/fcgiwrap.sock
-
-[Install]
-WantedBy=sockets.target

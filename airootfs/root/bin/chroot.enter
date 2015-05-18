@@ -1,3 +1,0 @@
-#!/bin/env bash
-
-chroot ./ /bin/env -i HOME=/home/spareproject DISPLAY=:13 /bin/bash --login

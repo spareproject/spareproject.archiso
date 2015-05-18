@@ -1,5 +1,0 @@
-
-randoms... 
-
-iptables -A INPUT -m recent --name DROPPED --update --seconds 3600 --reap -j DROP
-

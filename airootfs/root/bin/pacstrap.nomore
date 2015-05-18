@@ -1,6 +1,0 @@
-#!/bin/env bash
-
-mkdir -p rootfs/var/lib/pacman
-pacman -r rootfs -Syu base
-
-echo "?"
