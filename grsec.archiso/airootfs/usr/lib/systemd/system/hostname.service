@@ -1,0 +1,14 @@
+[Unit]
+Description=set a random hostname
+Before=systemd-hostnamed.service
+Before=systemd-networkd.service
+After=haveged.service
+
+[Service]
+User=root
+Type=oneshot
+ExecStart=/etc/systemd/scripts/hostname
+
+[Install]
+WantedBy=multi-user.target
+

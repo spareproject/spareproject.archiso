@@ -1,0 +1,4 @@
+[NetDev]
+Name=bridge
+Kind=bridge
+MACAddress=mac

@@ -1,0 +1,6 @@
+[Match]
+Name=bridge
+[Network]
+DHCP=both
+IPForward=yes
+IPMasquerade=yes

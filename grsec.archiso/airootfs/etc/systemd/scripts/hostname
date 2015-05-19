@@ -1,0 +1,8 @@
+#!/bin/env bash
+hostname="archiso-"
+hostname+=`date | md5sum | sed 's/...$//'`
+hostname+="-"
+hostname+=`makepasswd --chars=7`
+echo ${hostname} > /proc/sys/kernel/hostname
+echo ${hostname} > /etc/hostname
+unset hostname

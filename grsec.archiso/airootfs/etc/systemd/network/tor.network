@@ -1,0 +1,6 @@
+[Match]
+Name=tor
+[Network]
+Address=172.16.0.1/16
+IPForward=yes
+IPMasquerade=yes

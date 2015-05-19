@@ -1,0 +1,10 @@
+[Unit]
+Description=Mac Spoof
+
+[Service]
+Type=oneshot
+ExecStart=/etc/systemd/scripts/macchanger
+
+[Install]
+WantedBy=network.target
+

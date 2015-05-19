@@ -1,4 +1,24 @@
 
+grsec boots blocks systemd-nspawn went to manually set up bridges realized it was a stupid idea deleted the bridge restart systemd-networkd and it works /shrug
+brctl addbr test 
+brctl delbr test
+systemctl restart systemd-networkd
+
+ive been avoiding pulse audio because it pulls polkit and another 200mb of stuff with it
+so /usr/share/alsa/alsa.conf
+defaults.ctl.card 0
+defaults.pcm.card 0 
+
+default line 68/69 in arch change to whatever number sound card you want to use
+changes update instantly (may require restart of anything that boot with default 0)
+
+can find all the cards and number listings from alsamixer and F6
+
+probably add scripts to ./execute dump card number + name prompt to select then insert it into this file 
+
+only thing i havent been able to fix is dumping android-tools and android-udev into systemd-nspawn 
+even with an obsurd amount of bind mounting its still getting access denied to all the devices 
+
 got bored wanted to see if tor bridge worked went on 2 tor enabled irc's using weechat from an nspawn container
 took about 15 minutes? before host was making network connections out so lulz at that 
 

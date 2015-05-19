@@ -1,0 +1,16 @@
+#!/bin/env bash
+# if theres wifi bridge fucks up so forward the wifi to the internal and have the old way... 
+for i in `ls /sys/class/net/`; do 
+  if [[ ${i} == wl* ]]; then 
+    iptables -t nat -A POSTROUTING -o ${i} -j MASQUERADE
+    iptables -A FORWARD -i ${i} -o internal -m conntrack --ctstate ESTABLISHED,RELATED --ctproto tcp -j ACCEPT
+    iptables -A FORWARD -i ${i} -o internal -m conntrack --ctstate ESTABLISHED,RELATED --ctproto udp -j ACCEPT
+    iptables -A FORWARD -i ${i} -o tor -m conntrack --ctstate ESTABLISHED,RELATED --ctproto tcp -j ACCEPT
+    iptables -A FORWARD -i ${i} -o tor -m conntrack --ctstate ESTABLISHED,RELATED --ctproto udp -j ACCEPT
+    iptables -A FORWARD -p tcp -i internal -o ${i} -j ACCEPT
+    iptables -A FORWARD -p udp -i internal -o ${i} -j ACCEPT
+    iptables -A FORWARD -p tcp -i tor -o ${i} -j ACCEPT
+    iptables -A FORWARD -p udp -i tor -o ${i} -j ACCEPT
+    echo ${i}
+  fi
+done

@@ -1,0 +1,75 @@
+#!/bin/env bash
+########################################################################################
+# general notes, 
+# iplimit - number of parallel connections by a single address...
+# filter...   INPUT OUTPUT FORWARD
+# nat...      PREROUTING OUTPUT POSTROUTING
+# mangle...   PREROUTING OUTPUT INPUT FORWARD POSTROUTING
+# raw...      PREROUTING OUTPUT
+# security... INPUT OUTPUT FORWARD
+# so server only everythings dropped except a hitcount / iplimited https page...  liez i need a dev box that can do servers and still function for tinternets till sound over ssh...
+# no socket access unless given in auth... anyone 
+########################################################################################
+iptables -t filter -F
+iptables -t filter -X
+iptables -P INPUT DROP
+iptables -P OUTPUT ACCEPT
+iptables -P FORWARD DROP
+iptables -t nat -F
+iptables -t nat -X
+iptables -t mangle -F
+iptables -t mangle -X
+iptables -t raw -F
+iptables -t raw -X
+iptables -t security -F
+iptables -t security -X
+########################################################################################
+iptables -N UDP
+iptables -N TCP
+iptables -N LO
+iptables -N KNOCK_ONE
+iptables -N KNOCK_TWO
+iptables -N KNOCK_THREE
+iptables -N KNOCK_FOUR
+iptables -N SESSION
+iptables -N AUTH
+iptables -N BLOCKED # maybe sticking the hitcount socket access here... then change the name
+########################################################################################
+iptables -A INPUT -m conntrack --ctstate INVALID -j DROP
+iptables -A INPUT -j BLOCKED
+iptables -A INPUT -j KNOCK_ONE
+########################################################################################
+iptables -A INPUT -m recent --name KNOCK_TWO    --rcheck --seconds 60 --reap -j KNOCK_TWO 
+iptables -A INPUT -m recent --name KNOCK_THREE  --rcheck --seconds 60 --reap -j KNOCK_THREE
+iptables -A INPUT -m recent --name KNOCK_FOUR   --rcheck --seconds 60 --reap -j KNOCK_FOUR
+iptables -A INPUT -m recent --name SESSION      --rcheck --seconds 60 --reap -j SESSION
+iptables -A INPUT -m recent --name AUTH         --rcheck --seconds 60 --reap -j AUTH
+iptables -A KNOCK_THREE -m recent --name KNOCK_TWO   --remove
+iptables -A KNOCK_FOUR  -m recent --name KNOCK_THREE --remove
+iptables -A SESSION     -m recent --name KNOCK_FOUR  --remove 
+########################################################################################
+iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED --ctproto tcp -j ACCEPT
+iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED --ctproto udp -j ACCEPT
+########################################################################################
+iptables -A INPUT -i lo  -m conntrack --ctstate NEW -j LO
+iptables -A INPUT -p udp -m conntrack --ctstate NEW -j UDP
+iptables -A INPUT -p tcp -m conntrack --ctstate NEW -j TCP
+iptables -A INPUT -j LOG --log-prefix "DROPPED" --log-level 6
+iptables -A INPUT -j DROP
+########################################################################################
+iptables -A LO -p tcp -d 127.0.0.1 --dport 6010:6023 -j ACCEPT  # sshx display ports
+iptables -A LO -j LOG --log-prefix "LO" --log-level 6
+iptables -A LO -j DROP
+########################################################################################
+iptables -A TCP -p tcp --dport 8080 -j ACCEPT
+iptables -A TCP -p tcp --dport 12723 -j ACCEPT
+iptables -A TCP -p tcp --dport 12724 -j ACCEPT
+iptables -A TCP -p tcp --dport 12725 -j ACCEPT
+iptables -A TCP -j LOG --log-prefix "TCP" --log-level 6
+iptables -A TCP -j DROP
+########################################################################################
+iptables -A UDP -j LOG --log-prefix "UDP" --log-level 6
+iptables -A UDP -j DROP
+########################################################################################
+iptables -A PREROUTING -t nat -p tcp --dport 443 -j REDIRECT --to-port 8080
+########################################################################################
