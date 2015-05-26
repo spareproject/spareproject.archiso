@@ -1,0 +1,400 @@
+#!/bin/env bash
+#########################################################################################################################################################################################
+#USAGE_FUNCTIONS
+function usage {
+cat << EOF
+${0} - help
+raw     - create || mount an encrypted raw image
+install - install rootfs || run install script on containerfs
+boot    - boot a rootfs &| overlayfs &| tmpfs
+rdp     - start a desktop | application over ssh in Xephyr
+monitor - view information about current system
+EOF
+if [[ ${2} ]];then printf "%s\n" "${2}";fi
+exit ${1}
+}
+function usage_raw {
+cat << EOF
+-r rootfs
+-o overlayfs
+-t tmpfs
+-s size
+EOF
+if [[ ${2} ]];then printf "%s\n" "${2}";fi
+exit ${1}
+}
+function usage_install {
+cat << EOF
+-r rootfs
+-o overlayfs
+-t tmpfs
+-b base
+-i install
+EOF
+if [[ ${2} ]];then printf "%s\n" "${2}";fi
+exit ${1}
+}
+function usage_boot {
+cat << EOF
+-r rootfs
+-o overlayfs
+-t tmpfs
+-b bridge
+-c allow caps
+EOF
+if [[ ${2} ]];then printf "%s\n" "${2}";fi
+exit ${1}
+}
+function usage_rdp {
+cat << EOF
+-a address
+-x xephyr
+-u user
+-p port
+-e execute
+EOF
+if [[ ${2} ]];then printf "%s\n" "${2}";fi
+exit ${1}
+}
+function usage_monitor {
+cat << EOF
+no options yet...
+EOF
+if [[ ${2} ]];then printf "%s\n" "${2}";fi
+exit ${1}
+}
+###############################################################################################################################################################################################################
+#INSTALL_FUNCTIONS
+function check_base {
+if [[ $(wc -w <<< ${BASE}) -ne 1 ]];then usage_install 1 "only one base install script at a time plox or gtfo";fi
+AVAILABLE=$(ls ${CONFIG_}base/)
+PASS=""
+for i in ${AVAILABLE};do if [[ ${i} == ${BASE} ]];then PASS="true";fi;done
+if [[ ${PASS} != "true" ]];then usage_install 1 "base install script does not exist";fi
+}
+function check_install {
+AVAILABLE=$(ls ${CONFIG_}install/)
+for i in ${INSTALL};do
+  PASS=""
+  for o in ${AVAILABLE};do
+    if [[ ${i} == ${o} ]];then
+      PASS="true"
+    fi
+    if [[ ${PASS} != "true" ]];then
+      usage_install 1 "install script ${i} does not exist"
+    fi
+  done
+done
+}
+###############################################################################################################################################################################################################
+#RAW_FUNCTIONS
+HASH=sha512
+CIPHER=twofish-xts-plain64
+function raw_create {
+  fallocate -l ${SIZE} ${RAWFS_}${1}
+  mkdir ${2}
+  dd if=/dev/random bs=1 count=8192 | gpg --homedir ${GNUPG_} -e -r "container" >${KEY_}${1}
+  gpg --homedir ${GNUPG_} -d ${KEY_}${1} 2>/dev/null | cryptsetup --hash=${HASH} --cipher=${CIPHER} --offset=0 --key-file=- open --type=plain ${RAWFS_}${1} ${1}
+  mkfs.ext4 /dev/mapper/${1}
+  mount /dev/mapper/${1} ${2}
+}
+function raw_mount {
+  if [[ ! -d ${ROOTFS_} ]];then mkdir ${2};fi
+  gpg --homedir ${GNUPG_} -d ${KEY_}${1} 2>/dev/null | cryptsetup --hash=${HASH} --cipher=${CIPHER} --offset=0 --key-file=- open --type=plain ${RAWFS_}${1} ${1}
+  mount /dev/mapper/${1} ${2}
+}
+###############################################################################################################################################################################################################
+#RANDOM_FUNCTIONS
+function debug {
+echo "
+ROOTFS:${ROOTFS}:${ROOTFS_}
+OVERLAYFS:${OVERLAYFS}:${OVERLAYFS_}
+TMPFS:${TMPFS}:${TMPFS_}
+"
+}
+function unionfs_ro { if [[ ! $(mount | grep ${MOUNT_}${1}) ]];then unionfs -o allow_other,use_ino,suid,dev,nonempty -o cow ${2}=RO:${3}=RO ${MOUNT_}${1};fi; }
+function unionfs_rw { if [[ ! $(mount | grep ${MOUNT_}${1}) ]];then unionfs -o allow_other,use_ino,suid,dev,nonempty -o cow,max_files=33000 ${2}=RW:${MOUNT_}${3}=RO ${MOUNT_}${1};fi; }
+function nspawn { (/usr/bin/systemd-nspawn --network-bridge ${BRIDGE} --drop-capability ${CAPS} --boot --directory "${MOUNT_}${1}" &) & }
+###############################################################################################################################################################################################################
+command=${1};shift
+case $command in
+###############################################################################################################################################################################################################
+
+
+
+(raw)
+umask 077
+if [[ ${EUID} -ne 0 ]];then usage_raw 1 "root or gtfo";fi
+if [[ $# -eq 0 ]];then usage_raw 0;else
+while getopts "r:o:t:s:h" arg;do
+  case ${arg} in
+    (r)ROOTFS="${OPTARG}";ROOTFS_+="${ROOTFS}";;
+    (o)OVERLAYFS="${OPTARG}";;
+    (t)TMPFS="${OPTARG}";;
+    (s)SIZE="${OPTARG}";;
+    (h)usage_raw 0;;
+    (*)usage_raw 1;;
+  esac
+done
+if [[ ! -z ${TMPFS} ]];then if [[ ! -z ${OVERLAYFS} ]];then TMPFS="${OVERLAYFS}.${TMPFS}";fi;TMPFS="${ROOTFS}.${TMPFS}";TMPFS_+=${TMPFS};fi
+if [[ ! -z ${OVERLAYFS} ]];then OVERLAYFS="${ROOTFS}.${OVERLAYFS}";OVERLAYFS_+=${OVERLAYFS};fi
+#######################################################################################################
+# ROOTFS
+if [[ ! -z ${ROOTFS} && -z ${OVERLAYFS} && -z ${TMPFS} ]];then
+if [[ ! -z ${SIZE} ]];then
+  if [[ -d ${ROOTFS_} ]];then usage_raw 1 "rootfs exists";fi
+  if [[ -f ${RAWFS_}${ROOTFS} ]];then usage_raw 1 "rawfs exists";fi
+  if [[ -f ${KEY_}${ROOTFS} ]];then usage_raw 1 "key exists";fi
+  raw_create ${ROOTFS} ${ROOTFS_}
+else
+  if [[ ! -d ${ROOTFS_} ]];then usage_raw 1 "rootfs doesnt exist";fi
+  if [[ $(mount | grep ${ROOTFS_}) ]];then usage 1 "something already mounted on rootfs";fi 
+  if [[ ! -f ${RAWFS_}${ROOTFS} ]];then usage 1 "rawfs doesnt exist";fi
+  if [[ ! -f ${KEY_}${ROOTFS} ]];then usage 1 "key doesnt exist";fi
+  raw_mount ${ROOTFS} ${ROOTFS_}
+fi
+#######################################################################################################
+# ROOTFS TMPFS
+elif [[ ! -z ${ROOTFS} && -z ${OVERLAYFS} && ! -z ${TMPFS} ]];then
+if [[ ! -z ${SIZE} ]];then
+  if [[ ! -d ${ROOTFS_} ]];then usage_raw 1 "rootfs doesnt exist";fi
+  if [[ -d ${TMPFS_} ]];then usage_raw 1 "tmpfs exists";fi
+  if [[ -f ${RAWFS_}${TMPFS} ]];then usage_raw 1 "rawfs exists";fi
+  if [[ -f ${KEY_}${TMPFS} ]];then usage_raw 1 "key exists";fi
+  raw_create ${TMPFS} ${TMPFS_}
+else
+  if [[ ! -d ${ROOTFS_} ]];then usage_raw 1 "rootfs doesnt exist";fi
+  if [[ ! -d ${TMPFS_} ]];then usage_raw 1 "tmpfs doesnt exist";fi
+  if [[ $(mount | grep ${TMPFS_}) ]];then usage 1 "something already mounted on tmpfs";fi 
+  if [[ ! -f ${RAWFS_}${TMPFS} ]];then usage_raw 1 "rawfs doesnt exits";fi
+  if [[ ! -f ${KEY_}${TMPFS} ]];then usage_raw 1 "key doesnt exist";fi
+  raw_mount ${TMPFS} ${TMPFS_}
+fi
+#######################################################################################################
+# ROOTFS OVERLAYFS
+elif [[ ! -z ${ROOTFS} && ! -z ${OVERLAYFS} && -z ${TMPFS} ]];then
+if [[ ! -z ${SIZE} ]];then
+  if [[ ! -d ${ROOTFS_} ]];then usage_raw 1 "rootfs doesnt exist";fi
+  if [[ -d ${OVERLAYFS_} ]];then usage_raw 1 "overlayfs exists";fi
+  if [[ -f ${RAWFS_}${OVERLAYFS} ]];then usage_raw 1 "rawfs exists";fi
+  if [[ -f ${KEY_}${OVERLAYFS} ]];then usage_raw 1 "key exists";fi
+  raw_create ${OVERLAYFS} ${OVERLAYFS_}
+else
+  if [[ ! -d ${ROOTFS_} ]];then usage_raw 1 "rootfs doesnt exist";fi
+  if [[ ! -d ${OVERLAYFS_} ]];then usage_raw 1 "overlayfs doesnt exist";fi
+  if [[ $(mount | grep ${OVERLAYFS_}) ]];then usage 1 "something already mounted on overlayfs";fi 
+  if [[ ! -f ${RAWFS_}${OVERLAYFS} ]];then usage_raw 1 "rawfs doesnt exist";fi
+  if [[ ! -f ${KEY_}${OVERLAYFS} ]];then usage_raw 1 "key doesnt exist";fi
+  raw_mount ${OVERLAYFS} ${OVERLAYFS_}
+fi  
+#######################################################################################################
+# ROOTFS OVERLAYFS TMPFS
+elif [[ ! -z ${ROOTFS} && ! -z ${OVERLAYFS} && ! -z ${TMPFS} ]];then
+if [[ ! -z ${SIZE} ]];then
+  if [[ ! -d ${ROOTFS_} ]];then usage_raw 1 "rootfs doesnt exist";fi
+  if [[ ! -d ${OVERLAYFS_} ]];then usage_raw 1 "overlayfs doesnt exist";fi
+  if [[ -d ${TMPFS_} ]];then usage_raw 1 "tmpfs exists";fi
+  if [[ -f ${RAWFS_}${TMPFS} ]];then usage_raw 1 "rawfs exists";fi
+  if [[ -f ${KEY_}${TMPFS} ]];then usage_raw 1 "key exist";fi
+  raw_create ${TMPFS} ${TMPFS_}
+else
+  if [[ ! -d ${ROOTFS_} ]];then usage_raw 1 "rootfs doesnt exist";fi
+  if [[ ! -d ${OVERLAYFS_} ]];then usage_raw 1 "overlayfs doesnt exist";fi
+  if [[ ! -d ${TMPFS_} ]];then usage_raw 1 "tmpfs doesnt exist";fi
+  if [[ $(mount | grep ${TMPFS_}) ]];then usage 1 "something already mounted on overlayfs";fi 
+  if [[ ! -f ${RAWFS_}${TMPFS} ]];then usage_raw 1 "rawfs doesnt exist";fi
+  if [[ ! -f ${KEY_}${TMPFS} ]];then usage_raw 1 "key doesnt exist";fi
+  raw_mount ${TMPFS} ${TMPFS_}
+fi
+#######################################################################################################
+else echo "failed raw input";fi;fi;;
+###############################################################################################################################################################################################################
+
+
+
+(install)
+if [[ ${EUID} -ne 0 ]];then usage_install 1 "root or gtfo";fi
+if [[ $# -eq 0 ]];then usage_install 0;else
+while getopts "r:o:t:b:i:h" arg;do
+  case ${arg} in
+    (r)ROOTFS="${OPTARG}";ROOTFS_+="${ROOTFS}";;
+    (o)OVERLAYFS="${OPTARG}";;
+    (t)TMPFS="${OPTARG}";;
+    (b)BASE="${OPTARG}";;
+    (i)INSTALL="${OPTARG}";;
+    (h)usage_install 0;;
+    (*)usage_install 1;;
+  esac
+done
+if [[ ! -z ${TMPFS} ]];then if [[ ! -z ${OVERLAYFS} ]];then TMPFS="${OVERLAYFS}.${TMPFS}";fi;TMPFS="${ROOTFS}.${TMPFS}";TMPFS_+=${TMPFS};fi
+if [[ ! -z ${OVERLAYFS} ]];then OVERLAYFS="${ROOTFS}.${OVERLAYFS}";OVERLAYFS_+=${OVERLAYFS};fi
+
+if [[ ! -z ${BASE} ]];then check_base;else BASE=default;fi
+if [[ ! -z ${INSTALL} ]];then check_install;fi
+
+#######################################################################################################
+# ROOTFS
+if [[ ! -z ${ROOTFS} && -z ${OVERLAYFS} && -z ${TMPFS} ]];then
+if [[ -d ${ROOTFS_} ]];then if [[ ! $(mount | grep ${ROOTFS_}) && ! $(ls -A ${ROOTFS_}) == "lost+found" ]];then usage_install 1 "rootfs exists and isnt an empty rawfs";fi;fi
+. ${CONFIG_}base/${BASE}/install_script ${ROOTFS} ${ROOTFS_}
+if [[ ! -z ${INSTALL} ]];then for i in ${INSTALL};do . ${CONFIG_}install/${i}/install_script ${ROOTFS} ${ROOTFS_};done;fi
+#######################################################################################################
+# ROOTFS TMPFS
+elif [[ ! -z ${ROOTFS} && -z ${OVERLAYFS} && ! -z ${TMPFS} && ! -z ${INSTALL} ]];then
+if [[ ! -d ${ROOTFS_} ]];then usage_install 1 "rootfs doesnt exist";fi
+if [[ $(ls -A ${ROOTFS_}) == "" || $(ls -A ${ROOTFS_}) == "lost+found" ]];then usage_install 1 "rootfs exists but is empty";fi # extra rawfs check for mount fails
+if [[ -d ${TMPFS_} ]];then if [[ ! $(mount | grep ${TMPFS_}) && ! $(ls -A ${TMPFS_}) == "lost+found" ]];then usage 1 "tmpfs exists and isnt an empty rawfs";fi;fi
+unionfs_rw ${TMPFS} ${TMPFS_} ${RAWFS_}
+for i in ${INSTALL};do . ${CONFIG_}install/${i}/install_script ${TMPFS} ${TMPFS_};done
+#######################################################################################################
+# ROOTFS OVERLAYFS
+elif [[ ! -z ${ROOTFS} && ! -z ${OVERLAYFS} && -z ${TMPFS} && ! -z ${INSTALL} ]];then
+if [[ ! -d ${ROOTFS_} ]];then usage_install 1 "rootfs doesnt exist";fi
+if [[ $(ls -A ${ROOTFS_}) == "" || $(ls -A ${ROOTFS_}) == "lost+found" ]];then usage_install 1 "rootfs exists but is empty";fi
+if [[ -d ${OVERLAYFS_} ]];then if [[ ! $(mount | grep ${OVERLAYFS_}) && ! $(ls -A ${ROOTFS_}) == "lost+found" ]];then usage 1 "overlayfs exists and isnt an empty rawfs";fi;fi
+unionfs_rw ${OVERLAYFS} ${OVERLAYFS_} ${ROOTFS_}
+for i in ${INSTALL};do . ${CONFIG_}install/${i}/install_script ${OVERLAYFS} ${OVERLAYFS_};done
+#######################################################################################################
+# ROOTFS OVERLAYFS TMPFS
+elif [[ ! -z ${ROOTFS} && ! -z ${OVERLAYFS} && ! -z ${TMPFS} && ! -z ${INSTALL} ]];then
+if [[ ! -d ${ROOTFS_} ]];then usage_install 1 "rootfs doesnt exist";fi
+if [[ $(ls -A ${ROOTFS_}) == "" || $(ls -A ${ROOTFS_}) == "lost+found" ]];then usage_install 1 "rootfs exists but is empty";fi
+if [[ ! -d ${OVERLAYFS_} ]];then usage_install 1 "overlayfs doesnt exist";fi
+if [[ $(ls -A ${OVERLAYFS_}) == "" || $(ls -A ${OVERLAYFS_}) == "lost+found" ]];then usage_install 1 "overlayfs exists but is empty";fi
+if [[ -d ${TMPFS_} ]];then if [[ ! $(mount | grep ${TMPFS_}) && ! $(ls -A ${TMPFS_}) == "lost+found" ]];then usage 1 "tmpfs exists and isnt an empty rawfs";fi;fi
+unionfs_ro ${OVERLAYFS} ${OVERLAYFS_} ${ROOTFS_}
+unionfs_rw ${TMPFS} ${TMPFS_} ${OVERLAYFS}
+for i in ${INSTALL};do . ${CONFIG_}install/${i}/install_script ${TMPFS} ${TMPFS_};done
+#######################################################################################################
+else echo "failed install input";fi;fi;;
+###############################################################################################################################################################################################################
+
+
+
+(boot)
+if [[ ${EUID} -ne 0 ]];then usage 1 "must be run as root";fi
+if [[ $# -eq 0 ]];then usage_boot 0;else
+while getopts "r:o:t:b:ch" arg;do
+  case ${arg} in
+    (r)ROOTFS="${OPTARG}";ROOTFS_+="${ROOTFS}";;
+    (o)OVERLAYFS="${OPTARG}";;
+    (t)TMPFS="${OPTARG}";;
+    (b)BRIDGE="${OPTARG}";;
+    (c)CAPS="not_empty";;
+    (h)usage_raw 0;;
+    (*)usage_raw 1;;
+  esac
+done
+if [[ ! -z ${TMPFS} ]];then if [[ ! -z ${OVERLAYFS} ]];then TMPFS="${OVERLAYFS}.${TMPFS}";fi;TMPFS="${ROOTFS}.${TMPFS}";TMPFS_+=${TMPFS};fi
+if [[ ! -z ${OVERLAYFS} ]];then OVERLAYFS="${ROOTFS}.${OVERLAYFS}";OVERLAYFS_+=${OVERLAYFS};fi
+if [[ -z ${BRIDGE} ]];then BRIDGE=internal;fi
+if [[ -z ${CAPS} ]];then CAPS="CAP_CHOWN, CAP_DAC_OVERRIDE, CAP_DAC_READ_SEARCH, CAP_FOWNER, CAP_FSETID, CAP_IPC_OWNER, CAP_KILL, CAP_LEASE, CAP_LINUX_IMMUTABLE, CAP_NET_BIND_SERVICE, CAP_NET_BROADCAST, CAP_NET_RAW, CAP_SETGID, CAP_SETFCAP, CAP_SETPCAP, CAP_SETUID, CAP_SYS_ADMIN, CAP_SYS_CHROOT, CAP_SYS_NICE, CAP_SYS_PTRACE, CAP_SYS_TTY_CONFIG, CAP_SYS_RESOURCE, CAP_SYS_BOOT, CAP_AUDIT_WRITE, CAP_AUDIT_CONTROL. CAP_NET_ADMIN";else CAPS="";fi
+#######################################################################################################
+# ROOTFS
+if [[ ! -z ${ROOTFS} && -z ${OVERLAYFS} && -z ${TMPFS} ]];then
+if [[ ! -d ${ROOTFS_} ]];then usage_boot 1 "rootfs doesnt exist";fi
+nspawn ${ROOTFS} ${ROOTFS_}
+#######################################################################################################
+# ROOTFS TMPFS
+elif [[ ! -z ${ROOTFS} && -z ${OVERLAYFS} && ! -z ${TMPFS} ]];then
+if [[ ! -d ${ROOTFS_} ]];then usage_boot 1 "rootfs doesnt exist";fi
+if [[ ! -d ${TMPFS_} ]];then mkdir ${TMPFS_};fi
+if [[ ! -d ${MOUNT_}${TMPFS} ]];then mkdir ${MOUNT_}${TMPFS};fi
+unionfs_rw ${TMPFS} ${TMPFS_} ${ROOTFS_}
+nspawn ${TMPFS} ${MOUNT_}${TMPFS_}
+#######################################################################################################
+# ROOTFS OVERLAYFS
+elif [[ ! -z ${ROOTFS} && ! -z ${OVERLAYFS} && -z ${TMPFS} ]];then
+if [[ ! -d ${ROOTFS_} ]];then usage_boot 1 "rootfs doesnt exist";fi
+if [[ ! -d ${OVERLAYFS_} ]];then mkdir ${OVERLAYFS_};fi
+if [[ ! -d ${MOUNT_}${OVERLAYFS} ]];then mkdir ${MOUNT_}${OVERLAYFS};fi
+unionfs_rw ${OVERLAYFS} ${OVERLAYFS_} ${ROOTFS_}
+nspawn ${OVERLAYFS} ${MOUNT_}${OVERLAYFS_}
+#######################################################################################################
+# ROOTFS OVERLAYFS TMPFS
+elif [[ ! -z ${ROOTFS} && ! -z ${OVERLAYFS} && ! -z ${TMPFS} ]];then
+if [[ ! -d ${ROOTFS_} ]];then usage_boot 1 "rootfs doesnt exist";fi
+if [[ ! -d ${OVERLAYFS_} ]];then usage_boot 1 "overlayfs doesnt exist";fi
+if [[ ! -d ${TMPFS_} ]];then mkdir ${TMPFS_};fi
+if [[ ! -d ${MOUNT_}${OVERLAYFS} ]];then mkdir ${MOUNT_}${OVERLAYFS};fi
+if [[ ! -d ${MOUNT_}${TMPFS} ]];then mkdir ${MOUNT_}${TMPFS};fi
+unionfs_ro ${OVERLAYFS} ${OVERLAYFS_} ${ROOTFS_}
+unionfs_rw ${TMPFS} ${TMPFS_} ${OVERLAYFS}
+nspawn ${TMPFS}
+#function nspawn { (/usr/bin/systemd-nspawn --machine ${1} --network-bridge=${BRIDGE} --drop-capability=${CAPS} --boot --directory "${MOUNT_}${1}" &) & }
+#######################################################################################################
+else echo "failed install input";fi;fi;;
+###############################################################################################################################################################################################################
+
+
+
+(rdp)
+if [[ $# -eq 0 ]];then echo usage_rdp 0;else
+  while getopts "a:x:u:p:e:h" arg;do
+    case ${arg} in
+      (a)ADDRESS=${OPTARG};;
+      (x)XEPHYR=${OPTARG};;
+      (u)USER=${OPTARG};;
+      (p)PORT=${OPTARG};;
+      (e)EXECUTE=${OPTARG};;
+      (h)usage_rdp 0;;
+      (*)usage_rdp 1;;
+    esac
+  done
+fi
+if [[ -z ${XEPHYR} ]];then XEPHYR=:13;fi
+if [[ -z ${USER} ]];then USER="user";fi
+if [[ -z ${PORT} ]];then PORT="31279";fi
+if [[ -z ${EXECUTE} ]];then EXECUTE="dwm";fi
+ORIGINAL=${DISPLAY}
+(Xephyr -screen 1900x1060 ${XEPHYR} &)&
+export DISPLAY=:${XEPHYR}
+(ssh -o StrictHostKeyChecking="no" -o UserKnownHostsFile="/dev/null" -p ${PORT} ${USER}@${ADDRESS} ${EXECUTE} &)&
+export DISPLAY=${ORIGINAL}
+;;
+###############################################################################################################################################################################################################
+(monitor)
+if [[ ${EUID} -ne 0 ]];then usage 1 "must be run as root";fi
+if [[ $# -eq 0 ]];then
+  echo "system overview no args"
+else
+  while getopts "h" arg;do
+    case ${arg} in
+      (h)echo "monitor help";;
+      (*)echo "monitor error";;
+    esac
+  done
+fi
+;;
+###############################################################################################################################################################################################################
+(kill)
+if [[ ${EUID} -ne 0 ]];then usage 1 "must be run as root";fi
+  echo "kill every running container umount every unionfs, rawfs kill crypt setup remove empty dirs"
+;;
+###############################################################################################################################################################################################################
+(*) usage 1 "no input";;
+###############################################################################################################################################################################################################
+esac
+
+
+
+
+
+
+
+
+
+
+
+###############################################################################################################################################################################################################
+
+
+
+
+
+
+
+
+
+
+
