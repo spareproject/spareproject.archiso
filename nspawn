@@ -80,10 +80,10 @@ for i in ${INSTALL};do
     if [[ ${i} == ${o} ]];then
       PASS="true"
     fi
+  done
     if [[ ${PASS} != "true" ]];then
       usage_install 1 "install script ${i} does not exist"
     fi
-  done
 done
 }
 ###############################################################################################################################################################################################################
@@ -241,17 +241,23 @@ if [[ ! -z ${INSTALL} ]];then for i in ${INSTALL};do . ${CONFIG_}install/${i}/in
 elif [[ ! -z ${ROOTFS} && -z ${OVERLAYFS} && ! -z ${TMPFS} && ! -z ${INSTALL} ]];then
 if [[ ! -d ${ROOTFS_} ]];then usage_install 1 "rootfs doesnt exist";fi
 if [[ $(ls -A ${ROOTFS_}) == "" || $(ls -A ${ROOTFS_}) == "lost+found" ]];then usage_install 1 "rootfs exists but is empty";fi # extra rawfs check for mount fails
-if [[ -d ${TMPFS_} ]];then if [[ ! $(mount | grep ${TMPFS_}) && ! $(ls -A ${TMPFS_}) == "lost+found" ]];then usage 1 "tmpfs exists and isnt an empty rawfs";fi;fi
+
+#if [[ -d ${TMPFS_} ]];then if [[ ! $(mount | grep ${TMPFS_}) && ! $(ls -A ${TMPFS_}) == "lost+found" ]];then usage 1 "tmpfs exists and isnt an empty rawfs";fi;fi
+if [[ ! -d ${TMPFS_} ]];then mkdir ${TMPFS_};fi
+
 unionfs_rw ${TMPFS} ${TMPFS_} ${RAWFS_}
-for i in ${INSTALL};do . ${CONFIG_}install/${i}/install_script ${TMPFS} ${TMPFS_};done
+for i in ${INSTALL};do . ${CONFIG_}install/${i}/install_script ${MOUNT_}${TMPFS};done
 #######################################################################################################
 # ROOTFS OVERLAYFS
 elif [[ ! -z ${ROOTFS} && ! -z ${OVERLAYFS} && -z ${TMPFS} && ! -z ${INSTALL} ]];then
 if [[ ! -d ${ROOTFS_} ]];then usage_install 1 "rootfs doesnt exist";fi
 if [[ $(ls -A ${ROOTFS_}) == "" || $(ls -A ${ROOTFS_}) == "lost+found" ]];then usage_install 1 "rootfs exists but is empty";fi
-if [[ -d ${OVERLAYFS_} ]];then if [[ ! $(mount | grep ${OVERLAYFS_}) && ! $(ls -A ${ROOTFS_}) == "lost+found" ]];then usage 1 "overlayfs exists and isnt an empty rawfs";fi;fi
+
+#if [[ -d ${OVERLAYFS_} ]];then if [[ ! $(mount | grep ${OVERLAYFS_}) && ! $(ls -A ${ROOTFS_}) == "lost+found" ]];then usage 1 "overlayfs exists and isnt an empty rawfs";fi;fi
+if [[ ! -d ${OVERLAYFS_} ]];then mkdir ${OVERLAYFS_};fi
+
 unionfs_rw ${OVERLAYFS} ${OVERLAYFS_} ${ROOTFS_}
-for i in ${INSTALL};do . ${CONFIG_}install/${i}/install_script ${OVERLAYFS} ${OVERLAYFS_};done
+for i in ${INSTALL};do . ${CONFIG_}install/${i}/install_script ${MOUNT_}${OVERLAYFS};done
 #######################################################################################################
 # ROOTFS OVERLAYFS TMPFS
 elif [[ ! -z ${ROOTFS} && ! -z ${OVERLAYFS} && ! -z ${TMPFS} && ! -z ${INSTALL} ]];then
@@ -259,10 +265,13 @@ if [[ ! -d ${ROOTFS_} ]];then usage_install 1 "rootfs doesnt exist";fi
 if [[ $(ls -A ${ROOTFS_}) == "" || $(ls -A ${ROOTFS_}) == "lost+found" ]];then usage_install 1 "rootfs exists but is empty";fi
 if [[ ! -d ${OVERLAYFS_} ]];then usage_install 1 "overlayfs doesnt exist";fi
 if [[ $(ls -A ${OVERLAYFS_}) == "" || $(ls -A ${OVERLAYFS_}) == "lost+found" ]];then usage_install 1 "overlayfs exists but is empty";fi
-if [[ -d ${TMPFS_} ]];then if [[ ! $(mount | grep ${TMPFS_}) && ! $(ls -A ${TMPFS_}) == "lost+found" ]];then usage 1 "tmpfs exists and isnt an empty rawfs";fi;fi
+
+#if [[ -d ${TMPFS_} ]];then if [[ ! $(mount | grep ${TMPFS_}) && ! $(ls -A ${TMPFS_}) == "lost+found" ]];then usage 1 "tmpfs exists and isnt an empty rawfs";fi;fi
+if [[ ! -d ${TMPFS_} ]];then mkdir ${TMPFS_};fi
+
 unionfs_ro ${OVERLAYFS} ${OVERLAYFS_} ${ROOTFS_}
 unionfs_rw ${TMPFS} ${TMPFS_} ${OVERLAYFS}
-for i in ${INSTALL};do . ${CONFIG_}install/${i}/install_script ${TMPFS} ${TMPFS_};done
+for i in ${INSTALL};do . ${CONFIG_}install/${i}/install_script ${MOUNT_}${TMPFS};done
 #######################################################################################################
 else echo "failed install input";fi;fi;;
 ###############################################################################################################################################################################################################
@@ -331,7 +340,7 @@ if [[ $# -eq 0 ]];then echo usage_rdp 0;else
     case ${arg} in
       (a)ADDRESS=${OPTARG};;
       (x)XEPHYR=${OPTARG};;
-      (u)USER=${OPTARG};;
+      (u)AS=${OPTARG};;
       (p)PORT=${OPTARG};;
       (e)EXECUTE=${OPTARG};;
       (h)usage_rdp 0;;
@@ -340,13 +349,13 @@ if [[ $# -eq 0 ]];then echo usage_rdp 0;else
   done
 fi
 if [[ -z ${XEPHYR} ]];then XEPHYR=:13;fi
-if [[ -z ${USER} ]];then USER="user";fi
+if [[ -z ${AS} ]];then AS="user";fi
 if [[ -z ${PORT} ]];then PORT="31279";fi
 if [[ -z ${EXECUTE} ]];then EXECUTE="dwm";fi
 ORIGINAL=${DISPLAY}
 (Xephyr -screen 1900x1050 ${XEPHYR} &)&
 export DISPLAY=:${XEPHYR}
-(ssh -o StrictHostKeyChecking="no" -o UserKnownHostsFile="/dev/null" -p ${PORT} ${USER}@${ADDRESS} ${EXECUTE} &>/dev/null &)&
+(ssh -o StrictHostKeyChecking="no" -o UserKnownHostsFile="/dev/null" -p ${PORT} ${AS}@${ADDRESS} ${EXECUTE} &>/dev/null &)&
 export DISPLAY=${ORIGINAL}
 ;;
 ###############################################################################################################################################################################################################

@@ -1,4 +1,21 @@
 
-backup of the cluster fuck script that doesnt work very well : / 
-random testing raw boot rdp work installs fucked 
+right so that was annoying like 400 lines of pointless input checks with error messages and im pretty sure its not idiot proof
+
+
+
+soooooooo... havent even finished it and more updates
+
+dropping unionfs-fuse dumping mount -t overlayfs...  install scripts on none booted
+dropping unionfs-fuse using systemd-nspawn --overlayfs boots (couldnt use ssh on 220 so not yet)
+
+really want to setup btrfs 
+
+--private-users switch do what i think it does? 
+
+meh either way tried dumping 220 onto a liveusb and it hangs 10seconds on boot with udev clean up 
+
+and it wont ssh into anything because of failed to allocate PTY0 and other random fails 
+
+been running testing for ages and this is the first time its not been perfect so /shrug should have probably poked it more but need sleep
+
 
