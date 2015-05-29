@@ -63,6 +63,17 @@ EOF
 if [[ ${2} ]];then printf "%s\n" "${2}";fi
 exit ${1}
 }
+function usage_kill {
+cat << EOF
+-r rootfs
+-o overlayfs
+-t tmpfs
+-a all
+EOF
+if [[ ${2} ]];then printf "%s\n" "${2}";fi
+exit ${1}
+}
+
 ###############################################################################################################################################################################################################
 #INSTALL_FUNCTIONS
 function check_base {
@@ -112,8 +123,13 @@ OVERLAYFS:${OVERLAYFS}:${OVERLAYFS_}
 TMPFS:${TMPFS}:${TMPFS_}
 "
 }
-function unionfs_ro { if [[ ! $(mount | grep ${MOUNT_}${1}) ]];then unionfs -o allow_other,use_ino,suid,dev,nonempty -o cow ${2}=RO:${3}=RO ${MOUNT_}${1};fi; }
-function unionfs_rw { if [[ ! $(mount | grep ${MOUNT_}${1}) ]];then unionfs -o allow_other,use_ino,suid,dev,nonempty -o cow,max_files=33000 ${2}=RW:${3}=RO ${MOUNT_}${1};fi; }
+function unionfs_ro { 
+  if [[ ! -d ${MOUNT_}${1} ]];then mkdir ${MOUNT_}${1};fi
+  if [[ ! $(mount | grep ${MOUNT_}${1}) ]];then unionfs -o allow_other,use_ino,suid,dev,nonempty -o cow ${2}=RO:${3}=RO ${MOUNT_}${1};fi
+}
+function unionfs_rw {
+if [[ ! -d ${MOUNT_}${1} ]];then mkdir ${MOUNT_}${1};fi
+if [[ ! $(mount | grep ${MOUNT_}${1}) ]];then unionfs -o allow_other,use_ino,suid,dev,nonempty -o cow,max_files=33000 ${2}=RW:${3}=RO ${MOUNT_}${1};fi; }
 function nspawn { (/usr/bin/systemd-nspawn --quiet --boot --network-bridge=${BRIDGE} --directory=${1} --drop-capability=${DROP_CAP} &>/dev/null &)& }
 ###############################################################################################################################################################################################################
 command=${1};shift
@@ -215,6 +231,7 @@ else echo "failed raw input";fi;fi;;
 (install)
 if [[ ${EUID} -ne 0 ]];then usage_install 1 "root or gtfo";fi
 if [[ $# -eq 0 ]];then usage_install 0;else
+
 while getopts "r:o:t:b:i:h" arg;do
   case ${arg} in
     (r)ROOTFS="${OPTARG}";ROOTFS_+="${ROOTFS}";;
@@ -234,6 +251,7 @@ if [[ ! -z ${INSTALL} ]];then check_install;fi
 # ROOTFS
 if [[ ! -z ${ROOTFS} && -z ${OVERLAYFS} && -z ${TMPFS} ]];then
 if [[ -d ${ROOTFS_} ]];then if [[ ! $(mount | grep ${ROOTFS_}) && ! $(ls -A ${ROOTFS_}) == "lost+found" ]];then usage_install 1 "rootfs exists and isnt an empty rawfs";fi;fi
+# base install creates ROOTFS_
 . ${CONFIG_}base/${BASE}/install_script ${ROOTFS_}
 if [[ ! -z ${INSTALL} ]];then for i in ${INSTALL};do . ${CONFIG_}install/${i}/install_script ${ROOTFS_};done;fi
 #######################################################################################################
@@ -335,7 +353,8 @@ else echo "failed install input";fi;fi;;
 
 
 (rdp)
-if [[ $# -eq 0 ]];then echo usage_rdp 0;else
+if [[ ! ${EUID} -ne 0 ]];then usage 1 "none root or gtfo";fi
+if [[ $# -eq 0 ]];then usage_rdp 0;else
   while getopts "a:x:u:p:e:h" arg;do
     case ${arg} in
       (a)ADDRESS=${OPTARG};;
@@ -347,7 +366,6 @@ if [[ $# -eq 0 ]];then echo usage_rdp 0;else
       (*)usage_rdp 1;;
     esac
   done
-fi
 if [[ -z ${XEPHYR} ]];then XEPHYR=:13;fi
 if [[ -z ${AS} ]];then AS="user";fi
 if [[ -z ${PORT} ]];then PORT="31279";fi
@@ -357,26 +375,96 @@ ORIGINAL=${DISPLAY}
 export DISPLAY=:${XEPHYR}
 (ssh -o StrictHostKeyChecking="no" -o UserKnownHostsFile="/dev/null" -p ${PORT} ${AS}@${ADDRESS} ${EXECUTE} &>/dev/null &)&
 export DISPLAY=${ORIGINAL}
-;;
+fi;;
 ###############################################################################################################################################################################################################
+
+
+
 (monitor)
 if [[ ${EUID} -ne 0 ]];then usage 1 "must be run as root";fi
-if [[ $# -eq 0 ]];then
-  echo "system overview no args"
-else
-  while getopts "h" arg;do
-    case ${arg} in
-      (h)echo "monitor help";;
-      (*)echo "monitor error";;
-    esac
+clear
+declare -A ROOTFS_STATS
+for i in $(ls ${ROOTFS_});do
+  for o in $(ls ${OVERLAYFS_});do
+    if [[  $(grep ${i} <<< ${o}) ]];then
+      ROOTFS_STATS[${i}]+="${o} "
+    fi
   done
-fi
+  for o in $(ls ${TMPFS_});do
+    if [[ $(grep ${i} <<< ${o}) ]];then
+      ROOTFS_STATS[${i}]+="${o} "
+    fi
+  done
+done
+for i in $(ls ${ROOTFS_});do
+echo "########################################################################################################################################################################################################"
+echo "${i}:"
+  for o in ${ROOTFS_STATS[${i}]};do
+    echo -en "\t${o}\t\t"
+    if [[ $(grep ${o} <<< $(ls ${RAWFS_})) ]];then echo -en "rawfs / ";else echo -en "\e[9mrawfs\e[0m / ";fi
+    if [[ $(grep ${o} <<< $(ls /dev/mapper)) ]];then echo -en "mapped / ";else echo -en "\e[9mmapped\e[0m / ";fi
+    if [[ $(mount | grep ${ROOTFS_}${o}) || $(mount | grep ${OVERLAYFS_}${o}) || $(mount | grep ${TMPFS_}${o}) ]];then echo -en "mounted / ";else echo -en "\e[9mmounted\e[0m / ";fi 
+    if [[ $(mount | grep ${MOUNT_}${o}) ]];then echo -en "unionfs / ";else echo -en "\e[9munionfs\e[0m / ";fi
+    if [[ $(machinectl | grep ${o}) ]];then echo -en "running / ";else echo -en "\e[9mrunning\e[0m / ";fi
+    echo ""
+  done
+done
+echo "########################################################################################################################################################################################################"
+NUMBER_OF_RAWFS=$(ls -A ${RAWFS_} | wc -l)
+NUMBER_OF_MAPPED=$(($(ls -A /dev/mapper | wc -l)-2))
+NUMBER_OF_MOUNTED=$(( $(mount | grep ${ROOTFS_} | wc -l) + $(mount | grep ${OVERLAYFS_} | wc -l) + $(mount | grep ${TMPFS_} | wc -l) ))
+NUMBER_OF_UNIONFS=$(mount | grep unionfs | wc -l)
+NUMBER_OF_RUNNING=$(($(machinectl | wc -l) -3))
+echo "rawfs: ${NUMBER_OF_RAWFS} / mapped: ${NUMBER_OF_MAPPED} / mounted: $NUMBER_OF_MOUNTED / unionfs: ${NUMBER_OF_UNIONFS} / running: ${NUMBER_OF_RUNNING}"
 ;;
 ###############################################################################################################################################################################################################
 (kill)
 if [[ ${EUID} -ne 0 ]];then usage 1 "must be run as root";fi
-  echo "kill every running container umount every unionfs, rawfs kill crypt setup remove empty dirs"
-;;
+if [[ $# -eq 0 ]];then usage_kill 0;else
+
+while getopts "r:o:t:ah" arg;do
+  case ${arg} in
+    (r)ROOTFS="${OPTARG}";ROOTFS_+="${ROOTFS}";;
+    (o)OVERLAYFS="${OPTARG}";;
+    (t)TMPFS="${OPTARG}";;
+    (a)ALL="not_empty";;
+    (h)usage_raw 0;;
+    (*)usage_raw 1;;
+  esac
+done
+
+if [[ ! -z ${ROOTFS} && -z ${OVERLAYFS} && -z ${TMPFS} && -z ${ALL} ]];then
+echo "rootfs "
+elif [[ ! -z ${ROOTFS} && -z ${OVERLAYFS} && ! -z ${TMPFS} && -z ${ALL} ]];then
+echo "rootfs.tmpfs"
+elif [[ ! -z ${ROOTFS} && ! -z ${OVERLAYFS} && -z ${TMPFS} && -z ${ALL} ]];then
+echo "rootfs.overlayfs"
+elif [[ ! -z ${ROOTFS} && ! -z ${OVERLAYFS} && ! -z ${TMPFS} && -z ${ALL} ]];then
+echo "rootfs.overlayfs.tmpfs"
+elif [[ -z ${ROOTFS} && -z ${OVERLAYFS} && -z ${TMPFS} && ! -z ${ALL} ]];then
+echo "all"
+else echo stub;fi
+
+echo "
+machinectl poweroff... 
+umount...
+cryptsetup close...
+dir cleanup
+
+derps...
+how far down do you go
+kill -r rootfs -o overlayfs -t tmpfs kills machinectl
+umount rootfs.overlayfs.tmpfs
+umount rootfs.overlayfs.....
+
+if rootfs.overlayfs is mounted booting rootfs.overlayfs.* > 1 then killing it kills everything...
+
+"
+
+  
+
+
+fi;;
 ###############################################################################################################################################################################################################
 (*) usage 1 "no input";;
 ###############################################################################################################################################################################################################
@@ -393,14 +481,4 @@ esac
 
 
 ###############################################################################################################################################################################################################
-
-
-
-
-
-
-
-
-
-
 
