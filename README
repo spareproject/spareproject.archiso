@@ -1,25 +1,22 @@
 
 new plan...
 
-when i can be bothered to write it...
+minimals just stripped down enough to run nspawn tty1 root tty2 user
 
-so random notes
+and dev mode pretty much loads of random crap
 
-nspawn raw -r rootfs -s "not the correct format" 
-^ isnt atomic makes changes to the filesystem fallocate command fails but the script continues 
+and i really need to dump a browser or something or curl + html5/css out chromiums 500mb and icecats about 400mb i dont get why i cant just compile javascript and loads of other crap out of them
 
-nspawn install -r rootfs 
-nspawn install -r rootfs -i install 
-reinstalls base script cant be used to update root : / 
+pacman-key --keyserver pgp.mit.edu --recv-keys 684D54A189305A9CC95446D36B888913DDB59515
+pacman-key --lsign-key 684D54A189305A9CC95446D36B888913DDB59515
+pacman-key --keyserver pgp.mit.edu --recv-keys C92BAA713B8D53D3CAE63FC9E6974752F9704456
+pacman-key --lsign-key C92BAA713B8D53D3CAE63FC9E6974752F9704456
+#pacman-key --keyserver pgp.mit.edu --recv-keys 0AF527BB8A20E8A4
+#pacman-key --lsign-key 0AF527BB8A20E8A4
 
-either
-nspawn install -r rootfs : requires root to not exist
-nspawn install -r rootfs -i anything : requires rootfs to exist
+pacman -r ${1} -U https://repo.parabola.nu/libre/os/x86_64/mozilla-searchplugins-1.7-1-any.pkg.tar.xz
+pacman -r ${1} -U https://repo.parabola.nu/libre/os/x86_64/icecat-31.6.0_gnu1-4-x86_64.pkg.tar.xz
+pacman -r ${1} -S ttf-bitstream-vera
 
-
-
-
-gradually fixing the all around fail as and when i try to execute something and it breaks 
-
-
+^ been stealing icecat from parabola 
 
