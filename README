@@ -8,6 +8,17 @@ so random notes
 nspawn raw -r rootfs -s "not the correct format" 
 ^ isnt atomic makes changes to the filesystem fallocate command fails but the script continues 
 
+nspawn install -r rootfs 
+nspawn install -r rootfs -i install 
+reinstalls base script cant be used to update root : / 
+
+either
+nspawn install -r rootfs : requires root to not exist
+nspawn install -r rootfs -i anything : requires rootfs to exist
+
+
+
+
 gradually fixing the all around fail as and when i try to execute something and it breaks 
 
 
