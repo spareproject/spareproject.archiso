@@ -23,7 +23,4 @@ done
 #declare -A NMAPINFO
 #for i in ${IPS[@]}; do NMAPINFO+=([${i}]=`nmap ${i}`); done
 #############################################
-# and may aswell start automating the red team against anything that connects... because mdk
 
-# https://www.google.com.au/maps/preview/@<latitude>,<longitude> < - this but then how do i ss -t and open chromium to that page pretty easily actually : / 
-# http://maps.google.com/?q=<latitude>,<longitude> < - this but then how do i ss -t and open chromium to that page pretty easily actually : / 

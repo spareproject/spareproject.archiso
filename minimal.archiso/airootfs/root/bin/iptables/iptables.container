@@ -35,9 +35,8 @@ iptables -A LO -p tcp --dport 6010:6023 -j ACCEPT
 iptables -A LO -j LOG --log-prefix "LO" --log-level 6
 iptables -A LO -j DROP
 ########################################################################################
-iptables -A TCP -p tcp --dport 12723 -j ACCEPT
-iptables -A TCP -p tcp --dport 12724 -j ACCEPT
-iptables -A TCP -p tcp --dport 12725 -j ACCEPT
+iptables -A TCP -p tcp --dport 31279 -j ACCEPT
+iptables -A TCP -p tcp --dport 31279 -j ACCEPT
 iptables -A TCP -j LOG --log-prefix "TCP" --log-level 6
 iptables -A TCP -j DROP
 ########################################################################################

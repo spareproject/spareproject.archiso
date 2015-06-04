@@ -1,0 +1,12 @@
+[Unit]
+Description=sshd server key gen
+After=haveged.service
+
+[Service]
+User=%I
+Type=oneshot
+ExecStart=/usr/bin/ssh-keygen -t ecdsa -b 521 -f /home/%I/sshd/ssh_host_ecdsa_key
+
+[Install]
+WantedBy=multi-user.target
+

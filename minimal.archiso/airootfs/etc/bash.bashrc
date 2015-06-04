@@ -2,11 +2,7 @@
 ##########################################################################################################################################################################################
 [[ $- != *i* ]] && return
 if [[ $(id -u) != 0 ]];then
-  if [[ $(id -g) == "10" ]];then
-    PS1="\[\e[32m\][\u@archiso]\[\e[37m\][\w]:\[\e[m\] "
-  else
-  PS1="\[\e[32m\][\u@archiso]\[\e[33m\][\w]:\[\e[m\] "
-  fi
+  PS1="\[\e[32m\][\u@archiso]\[\e[36m\][\w]:\[\e[m\] "
 else
     PS1="\[\e[32m\][\u@archiso]\[\e[31m\][\w]:\[\e[m\] "
 fi
@@ -37,6 +33,7 @@ export ROOTFS_="/mnt/container/rootfs/"
 export OVERLAYFS_="/mnt/container/overlayfs/"
 export TMPFS_="/mnt/container/tmpfs/"
 export RAWFS_="/mnt/container/rawfs/"
+export CONFIG_="/mnt/container/config/"
 export MOUNT_="/mnt/container/mount/"
 export KEY_="/mnt/container/key/"
 export GNUPG_="/mnt/container/gnupg/"

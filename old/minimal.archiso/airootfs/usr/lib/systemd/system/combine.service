@@ -1,0 +1,15 @@
+[Unit]
+Description=set hostname switch mac add wifi to nat if it exists
+Before=systemd-hostnamed.service
+Before=systemd-networkd.service
+After=iptables.service
+After=haveged.service
+
+[Service]
+User=root
+Type=oneshot
+ExecStart=/etc/systemd/scripts/combine
+
+[Install]
+WantedBy=multi-user.target
+

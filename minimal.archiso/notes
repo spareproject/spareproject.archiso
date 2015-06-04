@@ -1,4 +1,7 @@
+who needs notes anyway...
 
-right so fucked up sshd needs seperate ports 
+only things that feel missing since i gutted it are git / base-devel 
+cant upload anything anymore and cant play with aur packages or abs packages
+^ apperently im to lazy to actually boot a container to do any of this
 
-going back to root owned... simple config
+

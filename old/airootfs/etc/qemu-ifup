@@ -1,4 +1,0 @@
-#!/bin/env bash
-sudo ip link set up ${1}
-sudo brctl addif bridge ${1}
-
